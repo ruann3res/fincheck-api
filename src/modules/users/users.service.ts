@@ -1,25 +1,26 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { PrismaService } from 'src/database/prisma/prisma.service';
 import { hash } from 'bcryptjs';
+import { UsersRepository } from 'src/shared/database/repositories/users.repositories';
 
 @Injectable()
 export class UsersService {
-    constructor(private readonly prismaService: PrismaService) {}
+    constructor(private readonly usersRepo: UsersRepository) {}
     async create(createUserDto: CreateUserDto) {
         const { email, name, password } = createUserDto;
 
-        const userAlreadyExists = await this.prismaService.user.findFirst({
+        const userAlreadyExists = await this.usersRepo.findUnique({
             where: { email },
+            select: { id: true },
         });
 
         if (userAlreadyExists) {
-            throw new BadRequestException('USER ALREADY EXITS');
+            throw new ConflictException('USER ALREADY EXITS');
         }
 
         const hashedPassword = await hash(password, 12);
 
-        const user = await this.prismaService.user.create({
+        const user = await this.usersRepo.create({
             data: {
                 email,
                 name,
